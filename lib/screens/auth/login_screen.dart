@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'otp_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../home/home_screen.dart';
+import 'forgot_password_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,68 +14,97 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController phoneController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final userIdController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   bool isLoading = false;
+  bool obscurePassword = true;
 
-  Future<void> sendOtp() async {
-    String phone = phoneController.text.trim();
+  Future<void> login() async {
+    final userId = userIdController.text.trim().toUpperCase();
+    final password = passwordController.text;
 
-    if (phone.length != 10) {
+    if (userId.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Enter a valid 10-digit mobile number"),
-        ),
+        const SnackBar(content: Text('Please enter User ID and Password')),
       );
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    try {
+      setState(() => isLoading = true);
 
-    await _auth.verifyPhoneNumber(
-      phoneNumber: "+91$phone",
+      final userQuery = await firestore
+          .collection('users')
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
 
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-      },
-
-      verificationFailed: (FirebaseAuthException e) {
-        setState(() {
-          isLoading = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message ?? "OTP Sending Failed"),
-          ),
+      if (userQuery.docs.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'Invalid User ID or Password',
         );
-      },
+      }
 
-      codeSent: (String verificationId, int? resendToken) {
-        setState(() {
-          isLoading = false;
-        });
+      final data = userQuery.docs.first.data();
+      final email = (data['email'] ?? '').toString().trim();
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OtpScreen(
-              verificationId: verificationId,
-            ),
-          ),
+      if (email.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'invalid-user-data',
+          message: 'Account email is not configured. Please contact support.',
         );
-      },
+      }
 
-      codeAutoRetrievalTimeout: (String verificationId) {},
-    );
+      await auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      String message = 'Login failed';
+
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
+        message = 'Invalid User ID or Password';
+      } else if (e.code == 'user-disabled') {
+        message = 'This account has been disabled';
+      } else if (e.code == 'too-many-requests') {
+        message = 'Too many attempts. Please try again later.';
+      } else if (e.message != null) {
+        message = e.message!;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Something went wrong. Please try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
   void dispose() {
-    phoneController.dispose();
+    userIdController.dispose();
+    passwordController.dispose();
     super.dispose();
   }
 
@@ -86,71 +119,100 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-
               Center(
-                child: Image.asset(
-                  "assets/images/logos/logo.png",
-                  width: 90,
-                ),
+                child: Image.asset('assets/images/logos/logo.png', width: 90),
               ),
-
               const SizedBox(height: 40),
-
               const Center(
                 child: Text(
-                  "Welcome Back",
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Welcome Back',
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Center(
                 child: Text(
-                  "Login with your mobile number",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                  ),
+                  'Login with your User ID',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ),
-
               const SizedBox(height: 35),
-
               TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
+                controller: userIdController,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  prefixText: "+91 ",
-                  labelText: "Mobile Number",
+                  prefixIcon: Icon(Icons.badge_outlined),
+                  labelText: 'User ID',
+                  hintText: 'e.g. ARK123456',
                   border: OutlineInputBorder(),
                 ),
               ),
-
-              const SizedBox(height: 25),
-
+              const SizedBox(height: 20),
+              TextField(
+                controller: passwordController,
+                obscureText: obscurePassword,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => isLoading ? null : login(),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelText: 'Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () =>
+                        setState(() => obscurePassword = !obscurePassword),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Forgot Password?'),
+                ),
+              ),
+              const SizedBox(height: 15),
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : sendOtp,
+                  onPressed: isLoading ? null : login,
                   child: isLoading
-                      ? const CircularProgressIndicator(
-                    color: Colors.white,
-                  )
-                      : const Text(
-                    "Send OTP",
-                    style: TextStyle(fontSize: 18),
-                  ),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Login', style: TextStyle(fontSize: 18)),
                 ),
               ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don't have an account?"),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignupScreen()),
+                      );
+                    },
+                    child: const Text('Sign Up'),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
