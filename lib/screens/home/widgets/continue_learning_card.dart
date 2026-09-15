@@ -11,22 +11,32 @@ class ContinueLearningCard extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('continue_learning')
           .where('isActive', isEqualTo: true)
-          .limit(20)
           .snapshots(),
       builder: (context, snapshot) {
-        // Keep the section visible even when Admin has not published content yet.
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const _EmptyLearningSection();
+        // Keep this widget in the tree even while Firestore is loading or
+        // returns no content. This avoids repeatedly mounting/unmounting the
+        // subtree and prevents Flutter's _dependents.isEmpty assertion.
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LearningCardPlaceholder(message: 'Loading learning content...');
         }
 
-        final docs = [...snapshot.data!.docs];
-        docs.sort((a, b) {
-          final aOrder = (a.data()['sortOrder'] as num?)?.toInt() ?? 0;
-          final bOrder = (b.data()['sortOrder'] as num?)?.toInt() ?? 0;
+        if (snapshot.hasError) {
+          return const _LearningCardPlaceholder(message: 'Learning content is temporarily unavailable.');
+        }
+
+        final docs = snapshot.data?.docs ?? const [];
+        if (docs.isEmpty) {
+          return const _LearningCardPlaceholder(message: 'New learning content will appear here.');
+        }
+
+        final sortedDocs = [...docs];
+        sortedDocs.sort((a, b) {
+          final aOrder = _number(a.data()['sortOrder']);
+          final bOrder = _number(b.data()['sortOrder']);
           return aOrder.compareTo(bOrder);
         });
 
-        final data = docs.first.data();
+        final data = sortedDocs.first.data();
         final title = _text(data['title']) ?? 'Continue Learning';
         final subtitle = _text(data['subtitle']) ?? '';
         final buttonText = _text(data['buttonText']) ?? 'Continue';
@@ -46,9 +56,7 @@ class ContinueLearningCard extends StatelessWidget {
           onPressed: targetType == 'mockTest'
               ? () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const MockTestListScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const MockTestListScreen()),
                   )
               : null,
         );
@@ -66,8 +74,10 @@ class ContinueLearningCard extends StatelessWidget {
   }
 }
 
-class _EmptyLearningSection extends StatelessWidget {
-  const _EmptyLearningSection();
+class _LearningCardPlaceholder extends StatelessWidget {
+  final String message;
+
+  const _LearningCardPlaceholder({required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -85,10 +95,10 @@ class _EmptyLearningSection extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Continue Learning',
             style: TextStyle(
               fontSize: 18,
@@ -96,13 +106,30 @@ class _EmptyLearningSection extends StatelessWidget {
               color: Color(0xFF687184),
             ),
           ),
-          SizedBox(height: 10),
-          Text(
-            'New learning content will appear here.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF9AA1B1),
-            ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                height: 46,
+                width: 46,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE7F3FF),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: Color(0xFF2196F3),
+                  size: 25,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -146,7 +173,6 @@ class _LearningCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final percent = (progress * 100).round();
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -220,10 +246,7 @@ class _LearningCard extends StatelessWidget {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                       ),
                     ],
                   ],
@@ -238,9 +261,7 @@ class _LearningCard extends StatelessWidget {
               value: progress,
               minHeight: 8,
               backgroundColor: const Color(0xFFE4E9F8),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF5064A0),
-              ),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5064A0)),
             ),
           ),
           const SizedBox(height: 6),
@@ -271,10 +292,7 @@ class _LearningCard extends StatelessWidget {
               ),
               child: Text(
                 buttonText,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ),
           ),
