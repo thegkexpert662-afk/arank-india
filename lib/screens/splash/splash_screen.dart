@@ -1,12 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import 'package:flutter_animate/flutter_animate.dart';
-
-import '../auth/login_screen.dart';
-import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../auth/login_screen.dart';
 import '../home/home_screen.dart';
 
@@ -21,40 +16,21 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    checkLogin();
-
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-      );
-    });
+    _checkLogin();
   }
 
-  Future<void> checkLogin() async {
+  Future<void> _checkLogin() async {
+    // Keep the splash visible briefly, then perform exactly one navigation.
     await Future.delayed(const Duration(seconds: 2));
-
-    User? user = FirebaseAuth.instance.currentUser;
 
     if (!mounted) return;
 
-    if (user != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
-        ),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const LoginScreen(),
-        ),
-      );
-    }
+    final user = FirebaseAuth.instance.currentUser;
+    final nextScreen = user != null ? const HomeScreen() : const LoginScreen();
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => nextScreen),
+    );
   }
 
   @override
@@ -78,21 +54,21 @@ class _SplashScreenState extends State<SplashScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  "assets/images/logos/logo.png",
+                  'assets/images/logos/logo.png',
                   width: 120,
                   height: 120,
                 )
                     .animate()
                     .scale(
-                  duration: 700.ms,
-                  curve: Curves.easeOutBack,
-                )
+                      duration: 700.ms,
+                      curve: Curves.easeOutBack,
+                    )
                     .fadeIn(),
 
                 const SizedBox(height: 28),
 
                 const Text(
-                  "ARank India",
+                  'ARank India',
                   style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.w700,
@@ -111,11 +87,9 @@ class _SplashScreenState extends State<SplashScreen> {
                       height: 2,
                       color: Colors.orange,
                     ),
-
                     const SizedBox(width: 10),
-
                     const Text(
-                      "I N D I A",
+                      'I N D I A',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w600,
@@ -123,9 +97,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         letterSpacing: 8,
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
                     Container(
                       width: 55,
                       height: 2,
@@ -133,14 +105,14 @@ class _SplashScreenState extends State<SplashScreen> {
                     ),
                   ],
                 ).animate().fadeIn(
-                  duration: 900.ms,
-                  delay: 500.ms,
-                ),
+                      duration: 900.ms,
+                      delay: 500.ms,
+                    ),
 
                 const SizedBox(height: 12),
 
                 Text(
-                  "Learn • Practice • Rank",
+                  'Learn • Practice • Rank',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey.shade600,
