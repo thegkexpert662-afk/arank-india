@@ -1,303 +1,106 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../mock_test/mock_test_list_screen.dart';
+import '../continue_learning_screen.dart';
 
 class ContinueLearningCard extends StatelessWidget {
   const ContinueLearningCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final db = FirebaseFirestore.instance;
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('continue_learning')
-          .where('isActive', isEqualTo: true)
-          .snapshots(),
+      stream: db.collection('continue_learning').where('isActive', isEqualTo: true).snapshots(),
       builder: (context, snapshot) {
-        // Keep this widget in the tree even while Firestore is loading or
-        // returns no content. This avoids repeatedly mounting/unmounting the
-        // subtree and prevents Flutter's _dependents.isEmpty assertion.
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _LearningCardPlaceholder(message: 'Loading learning content...');
+        if (snapshot.connectionState == ConnectionState.waiting) return _box(const CircularProgressIndicator());
+        if (snapshot.hasError) return _box(const Text('Continue Learning is temporarily unavailable.'));
+        final docs = [...(snapshot.data?.docs ?? [])];
+        docs.sort((a, b) => '${a.data()['subject'] ?? ''}'.compareTo('${b.data()['subject'] ?? ''}'));
+        if (docs.isEmpty) return _box(const Text('New learning sets will appear here.'));
+
+        final groups = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+        for (final d in docs) {
+          final subject = '${d.data()['subject'] ?? 'Other'}'.trim();
+          groups.putIfAbsent(subject.isEmpty ? 'Other' : subject, () => []).add(d);
         }
 
-        if (snapshot.hasError) {
-          return const _LearningCardPlaceholder(message: 'Learning content is temporarily unavailable.');
-        }
-
-        final docs = snapshot.data?.docs ?? const [];
-        if (docs.isEmpty) {
-          return const _LearningCardPlaceholder(message: 'New learning content will appear here.');
-        }
-
-        final sortedDocs = [...docs];
-        sortedDocs.sort((a, b) {
-          final aOrder = _number(a.data()['sortOrder']);
-          final bOrder = _number(b.data()['sortOrder']);
-          return aOrder.compareTo(bOrder);
-        });
-
-        final data = sortedDocs.first.data();
-        final title = _text(data['title']) ?? 'Continue Learning';
-        final subtitle = _text(data['subtitle']) ?? '';
-        final buttonText = _text(data['buttonText']) ?? 'Continue';
-        final thumbnailUrl = _text(data['thumbnailUrl']);
-        final targetType = _text(data['targetType']) ?? 'none';
-        final progress = ((_number(data['progress'])).clamp(0.0, 1.0)).toDouble();
-        final percent = (progress * 100).round();
-
-        return _LearningCard(
-          title: title,
-          subtitle: subtitle,
-          progress: progress,
-          buttonText: buttonText,
-          thumbnailUrl: thumbnailUrl,
-          iconName: _text(data['icon']) ?? 'menu_book',
-          scoreText: '$percent% Completed',
-          onPressed: targetType == 'mockTest'
-              ? () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MockTestListScreen()),
-                  )
-              : null,
-        );
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Continue Learning', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Color(0xFF687184))),
+          const SizedBox(height: 12),
+          ...groups.entries.map((entry) => _SubjectSection(subject: entry.key, sets: entry.value)),
+        ]);
       },
     );
   }
 
-  static double _number(dynamic value) =>
-      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+  Widget _box(Widget child) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: child,
+      );
+}
 
-  static String? _text(dynamic value) {
-    if (value == null) return null;
-    final text = value.toString().trim();
-    return text.isEmpty ? null : text;
+class _SubjectSection extends StatelessWidget {
+  final String subject;
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> sets;
+  const _SubjectSection({required this.subject, required this.sets});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [Icon(_icon(subject), size: 20, color: const Color(0xFF2D63E8)), const SizedBox(width: 7), Expanded(child: Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF343B4A))))]),
+          const SizedBox(height: 8),
+          ...sets.map((doc) => _SetTile(doc: doc)),
+        ]),
+      );
+
+  IconData _icon(String value) {
+    final s = value.toLowerCase();
+    if (s.contains('math')) return Icons.calculate_rounded;
+    if (s.contains('reason')) return Icons.psychology_rounded;
+    if (s.contains('hindi')) return Icons.translate_rounded;
+    if (s.contains('current')) return Icons.newspaper_rounded;
+    return Icons.menu_book_rounded;
   }
 }
 
-class _LearningCardPlaceholder extends StatelessWidget {
-  final String message;
-
-  const _LearningCardPlaceholder({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.045),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Continue Learning',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF687184),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                height: 46,
-                width: 46,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE7F3FF),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: const Icon(
-                  Icons.menu_book_rounded,
-                  color: Color(0xFF2196F3),
-                  size: 25,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LearningCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final double progress;
-  final String buttonText;
-  final String? scoreText;
-  final String? thumbnailUrl;
-  final String iconName;
-  final VoidCallback? onPressed;
-
-  const _LearningCard({
-    required this.title,
-    required this.subtitle,
-    required this.progress,
-    required this.buttonText,
-    required this.thumbnailUrl,
-    required this.iconName,
-    this.scoreText,
-    this.onPressed,
-  });
-
-  IconData _icon(String name) {
-    const icons = {
-      'menu_book': Icons.menu_book_rounded,
-      'quiz': Icons.quiz_rounded,
-      'play': Icons.play_circle_fill_rounded,
-      'school': Icons.school_rounded,
-      'math': Icons.calculate_rounded,
-      'language': Icons.translate_rounded,
-    };
-    return icons[name] ?? Icons.menu_book_rounded;
-  }
+class _SetTile extends StatelessWidget {
+  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+  const _SetTile({required this.doc});
 
   @override
   Widget build(BuildContext context) {
-    final percent = (progress * 100).round();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.045),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Continue Learning',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF687184),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                height: 46,
-                width: 46,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE7F3FF),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: thumbnailUrl != null
-                    ? Image.network(
-                        thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          _icon(iconName),
-                          color: const Color(0xFF2196F3),
-                          size: 25,
-                        ),
-                      )
-                    : Icon(
-                        _icon(iconName),
-                        color: const Color(0xFF2196F3),
-                        size: 25,
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF687184),
-                      ),
-                    ),
-                    if (subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: const Color(0xFFE4E9F8),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF5064A0)),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              scoreText ?? '$percent% Completed',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF687184),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2D63E8),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-              ),
-              child: Text(
-                buttonText,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ),
-        ],
-      ),
+    final d = doc.data();
+    final count = (d['questionCount'] as num?)?.toInt() ?? 0;
+    final user = FirebaseAuth.instance.currentUser;
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: user == null ? null : FirebaseFirestore.instance.collection('users').doc(user.uid).collection('continue_learning_progress').doc(doc.id).get(),
+      builder: (context, snapshot) {
+        final completed = (snapshot.data?.data()?['currentIndex'] as num?)?.toInt() ?? 0;
+        final safeCompleted = completed.clamp(0, count);
+        final percent = count == 0 ? 0.0 : safeCompleted / count;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(color: const Color(0xFFF7F9FF), borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFE5EAF5))),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Expanded(child: Text('${d['title'] ?? 'Learning Set'}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700))), Text('$safeCompleted/$count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF687184)))]),
+            const SizedBox(height: 7),
+            ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: percent, minHeight: 7, backgroundColor: const Color(0xFFE1E7F4))),
+            const SizedBox(height: 9),
+            Row(children: [
+              Expanded(child: Text(count == 0 ? 'Questions will be added soon' : safeCompleted >= count ? 'Completed' : 'Question ${safeCompleted + 1} next', style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
+              SizedBox(height: 36, child: ElevatedButton(
+                onPressed: count == 0 ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => ContinueLearningScreen(setId: doc.id, title: '${d['title'] ?? 'Continue Learning'}'))),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2D63E8), foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))),
+                child: Text(safeCompleted >= count && count > 0 ? 'Review' : 'Continue'),
+              )),
+            ]),
+          ]),
+        );
+      },
     );
   }
 }
