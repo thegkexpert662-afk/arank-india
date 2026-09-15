@@ -24,6 +24,15 @@ class ProgressCard extends StatelessWidget {
           .where('userId', isEqualTo: user.uid)
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const _ProgressView(
+            questions: 0,
+            accuracy: 0,
+            mockTests: 0,
+            streak: 0,
+          );
+        }
+
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
 
@@ -45,19 +54,24 @@ class ProgressCard extends StatelessWidget {
           );
           activeDays.add(date);
 
+          // Today's Progress must show only today's activity.
           if (date != today) continue;
 
           mockTests++;
-          correct += _readInt(data['correct']);
-          wrong += _readInt(data['wrong']);
-          questions += _readInt(data['correct']) +
-              _readInt(data['wrong']) +
-              _readInt(data['skipped']);
+
+          final resultCorrect = _readInt(data['correct']);
+          final resultWrong = _readInt(data['wrong']);
+          final resultSkipped = _readInt(data['skipped']);
+
+          correct += resultCorrect;
+          wrong += resultWrong;
+          questions += resultCorrect + resultWrong + resultSkipped;
         }
 
-        final accuracy = correct + wrong == 0
+        final attempted = correct + wrong;
+        final accuracy = attempted == 0
             ? 0
-            : ((correct / (correct + wrong)) * 100).round();
+            : ((correct / attempted) * 100).round();
 
         return _ProgressView(
           questions: questions,
