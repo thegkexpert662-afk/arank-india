@@ -1,14 +1,48 @@
-import 'package:flutter/material.dart';
-import '../../profile/profile_screen.dart';
-import '../../notifications/notification_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+import '../../notifications/notification_screen.dart';
+import '../../profile/profile_screen.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return _buildHeader(context, 'Student', null, 1);
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? <String, dynamic>{};
+        final name = (data['name'] ?? 'Student').toString().trim();
+        final userId = (data['userId'] ?? '').toString().trim();
+        final avatar = int.tryParse('${data['avatar'] ?? 1}') ?? 1;
+
+        return _buildHeader(
+          context,
+          name.isEmpty ? 'Student' : name,
+          userId.isEmpty ? null : userId,
+          avatar,
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    String name,
+    String? userId,
+    int avatar,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -16,61 +50,48 @@ class HomeHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                "Wolcome 👋",
+                'Welcome 👋',
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.grey,
                 ),
               ),
               const SizedBox(height: 4),
-
-              StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(FirebaseAuth.instance.currentUser!.uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Text(
-                      "Loading...",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  }
-
-                  final data =
-                  snapshot.data!.data() as Map<String, dynamic>?;
-
-                  return Text(
-                    data?['name'] ?? "User",
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                },
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
+              if (userId != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  userId,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-
-
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NotificationScreen(),
-                ),
-              );
-            },
-            child: const Icon(Icons.notifications_none),
-          ),
-
-        const SizedBox(width: 8),
-
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const NotificationScreen(),
+              ),
+            );
+          },
+          child: const Icon(Icons.notifications_none, size: 28),
+        ),
+        const SizedBox(width: 10),
         GestureDetector(
           onTap: () {
             Navigator.push(
@@ -80,10 +101,12 @@ class HomeHeader extends StatelessWidget {
               ),
             );
           },
-          child: const CircleAvatar(
+          child: CircleAvatar(
             radius: 22,
-            backgroundColor: Color(0xff2962FF),
-            child: Icon(
+            backgroundColor: const Color(0xff2962FF),
+            backgroundImage: AssetImage('assets/avatars/avatar$avatar.png'),
+            onBackgroundImageError: (_, __) {},
+            child: const Icon(
               Icons.person,
               color: Colors.white,
             ),
