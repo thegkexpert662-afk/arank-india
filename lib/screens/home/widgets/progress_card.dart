@@ -24,6 +24,15 @@ class ProgressCard extends StatelessWidget {
           .where('userId', isEqualTo: user.uid)
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _ProgressView(
+            questions: 0,
+            accuracy: 0,
+            mockTests: 0,
+            streak: 0,
+          );
+        }
+
         if (snapshot.hasError) {
           return const _ProgressView(
             questions: 0,
@@ -34,53 +43,62 @@ class ProgressCard extends StatelessWidget {
         }
 
         final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
+        final today = _dayOnly(now);
 
-        int questions = 0;
-        int correct = 0;
-        int wrong = 0;
-        int mockTests = 0;
+        int todayQuestions = 0;
+        int todayCorrect = 0;
+        int todayWrong = 0;
+        int todayMockTests = 0;
         final activeDays = <DateTime>{};
 
         for (final doc in snapshot.data?.docs ?? []) {
           final data = doc.data();
+
+          // Ignore incomplete/non-submitted result documents.
+          if (data['isSubmitted'] == false) continue;
+
           final submittedAt = _readDate(data['submittedAt']);
           if (submittedAt == null) continue;
 
-          final date = DateTime(
-            submittedAt.year,
-            submittedAt.month,
-            submittedAt.day,
-          );
-          activeDays.add(date);
+          final activityDay = _dayOnly(submittedAt.toLocal());
+          activeDays.add(activityDay);
 
-          // Today's Progress must show only today's activity.
-          if (date != today) continue;
+          if (activityDay != today) continue;
 
-          mockTests++;
+          todayMockTests++;
 
-          final resultCorrect = _readInt(data['correct']);
-          final resultWrong = _readInt(data['wrong']);
-          final resultSkipped = _readInt(data['skipped']);
+          final correct = _readInt(data['correct']);
+          final wrong = _readInt(data['wrong']);
+          final skipped = _readInt(data['skipped']);
 
-          correct += resultCorrect;
-          wrong += resultWrong;
-          questions += resultCorrect + resultWrong + resultSkipped;
+          todayCorrect += correct;
+          todayWrong += wrong;
+
+          // Count every question in today's completed mock test, including
+          // skipped questions, so the Questions number matches the test.
+          final storedTotal = _readInt(data['totalQuestions']);
+          todayQuestions += storedTotal > 0
+              ? storedTotal
+              : correct + wrong + skipped;
         }
 
-        final attempted = correct + wrong;
+        final attempted = todayCorrect + todayWrong;
         final accuracy = attempted == 0
             ? 0
-            : ((correct / attempted) * 100).round();
+            : ((todayCorrect / attempted) * 100).round();
 
         return _ProgressView(
-          questions: questions,
+          questions: todayQuestions,
           accuracy: accuracy,
-          mockTests: mockTests,
+          mockTests: todayMockTests,
           streak: _calculateStreak(activeDays, today),
         );
       },
     );
+  }
+
+  static DateTime _dayOnly(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
   }
 
   static int _readInt(dynamic value) {
