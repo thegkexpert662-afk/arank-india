@@ -16,9 +16,9 @@ class FeatureCard extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      childAspectRatio: 1.38,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.48,
       children: [
         StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
@@ -26,7 +26,20 @@ class FeatureCard extends StatelessWidget {
               .doc('practice_card')
               .snapshots(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox();
+            if (!snapshot.hasData || !snapshot.data!.exists) {
+              return FeatureItem(
+                title: 'Practice G.K.',
+                subtitle: '10000+ Questions',
+                icon: Icons.menu_book_rounded,
+                color: Colors.blue,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SscGdQuestionsScreen(),
+                  ),
+                ),
+              );
+            }
 
             final data = snapshot.data!.data() as Map<String, dynamic>;
             if (data['isActive'] != true) return const SizedBox();
@@ -35,15 +48,13 @@ class FeatureCard extends StatelessWidget {
               title: data['title'] ?? 'Practice G.K.',
               subtitle: data['subtitle'] ?? '10000+ Questions',
               icon: Icons.menu_book_rounded,
-              color: const Color(0xFF2196F3),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SscGdQuestionsScreen(),
-                  ),
-                );
-              },
+              color: Colors.blue,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SscGdQuestionsScreen(),
+                ),
+              ),
             );
           },
         ),
@@ -51,61 +62,51 @@ class FeatureCard extends StatelessWidget {
           title: 'Hindi',
           subtitle: 'All Questions',
           icon: Icons.menu_book_rounded,
-          color: const Color(0xFFFF4081),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HindiQuestionsScreen()),
-            );
-          },
+          color: Colors.pinkAccent,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const HindiQuestionsScreen()),
+          ),
         ),
         FeatureItem(
           title: 'Reasoning',
           subtitle: 'All Questions',
           icon: Icons.psychology_rounded,
-          color: const Color(0xFFFFA000),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReasoningQuestionsScreen()),
-            );
-          },
+          color: Colors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ReasoningQuestionsScreen()),
+          ),
         ),
         FeatureItem(
           title: 'Maths',
           subtitle: 'All Questions',
           icon: Icons.calculate_rounded,
-          color: const Color(0xFF26B67A),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MathsQuestionsScreen()),
-            );
-          },
+          color: Colors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MathsQuestionsScreen()),
+          ),
         ),
         FeatureItem(
           title: 'Mock Test',
           subtitle: 'Full Length Tests',
           icon: Icons.assignment_rounded,
-          color: const Color(0xFF7C4DFF),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MockTestListScreen()),
-            );
-          },
+          color: Colors.deepPurple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MockTestListScreen()),
+          ),
         ),
         FeatureItem(
           title: 'Leaderboard',
           subtitle: 'Top Performers',
           icon: Icons.emoji_events_rounded,
-          color: const Color(0xFF2196F3),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
-            );
-          },
+          color: Colors.blue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+          ),
         ),
       ],
     );
@@ -130,125 +131,114 @@ class FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final darkColor = Color.lerp(color, Colors.black, 0.22)!;
-    final backgroundColor = Color.lerp(color, Colors.white, 0.93)!;
+    final dark = Color.lerp(color, Colors.black, 0.18)!;
+    final bg = Color.lerp(color, Colors.white, 0.93)!;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.white, backgroundColor],
+              colors: [Colors.white, bg],
             ),
-            border: Border.all(color: color.withOpacity(0.08)),
+            border: Border.all(color: color.withOpacity(0.10)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.055),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
+                color: color.withOpacity(0.10),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(18),
             child: Stack(
               children: [
-                // Large soft background graphic, like the reference design.
                 Positioned(
-                  right: -22,
-                  top: -20,
+                  right: -12,
+                  top: -18,
                   child: Icon(
                     icon,
-                    size: 118,
+                    size: 90,
                     color: color.withOpacity(0.055),
                   ),
                 ),
-                // Circular action button.
-                Positioned(
-                  right: 14,
-                  bottom: 14,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: color.withOpacity(0.08),
-                      border: Border.all(color: color.withOpacity(0.06)),
-                    ),
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 21,
-                      color: darkColor,
-                    ),
-                  ),
-                ),
                 Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // HD-style icon tile.
                       Container(
-                        width: 54,
-                        height: 54,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(17),
+                          borderRadius: BorderRadius.circular(14),
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              color.withOpacity(0.98),
-                              Color.lerp(color, Colors.black, 0.10)!,
+                              color.withOpacity(0.20),
+                              color.withOpacity(0.08),
                             ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withOpacity(0.20),
-                              blurRadius: 12,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
                         ),
-                        child: Icon(
-                          icon,
-                          color: Colors.white,
-                          size: 29,
-                        ),
+                        child: Icon(icon, color: dark, size: 25),
                       ),
                       const Spacer(),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 52),
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF24324B),
-                            height: 1.1,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF687184),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 48),
-                        child: Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 13,
-                            height: 1.15,
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.82),
+                              border: Border.all(
+                                color: color.withOpacity(0.12),
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: dark,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
