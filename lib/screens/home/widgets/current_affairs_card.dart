@@ -28,7 +28,10 @@ class CurrentAffairsCard extends StatelessWidget {
             children: [
               Icon(Icons.newspaper_rounded, color: Colors.deepPurple),
               SizedBox(width: 8),
-              Text('Current Affairs', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(
+                'Current Affairs',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -36,14 +39,20 @@ class CurrentAffairsCard extends StatelessWidget {
             stream: FirebaseFirestore.instance
                 .collection('current_affairs')
                 .where('isActive', isEqualTo: true)
-                .limit(10)
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 110, child: Center(child: CircularProgressIndicator()));
+                return const SizedBox(
+                  height: 110,
+                  child: Center(child: CircularProgressIndicator()),
+                );
               }
+
               if (snapshot.hasError) {
-                return const Text('Current Affairs could not be loaded.');
+                return Text(
+                  'Current Affairs could not be loaded: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                );
               }
 
               final docs = [...(snapshot.data?.docs ?? [])];
@@ -52,60 +61,97 @@ class CurrentAffairsCard extends StatelessWidget {
               if (docs.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: const Text('No Current Affairs available right now.'),
                 );
               }
 
-              final doc = docs.first;
-              final data = doc.data();
-              final title = '${data['title'] ?? ''}';
-              final summary = '${data['summary'] ?? ''}';
-              final content = '${data['content'] ?? ''}';
-              final dateText = '${data['dateText'] ?? ''}';
-
               return Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.deepPurple.shade50, borderRadius: BorderRadius.circular(16)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('🔥 $title', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 10),
-                        Text(summary, style: const TextStyle(color: Colors.black87, height: 1.5)),
-                        if (dateText.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Row(children: [
-                            const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                            const SizedBox(width: 6),
-                            Text(dateText, style: const TextStyle(color: Colors.grey)),
-                          ]),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CurrentAffairsDetailScreen(
-                            title: title,
-                            summary: summary,
-                            content: content,
-                            dateText: dateText,
-                          ),
+                  ...docs.map((doc) {
+                    final data = doc.data();
+                    final title = '${data['title'] ?? ''}'.trim();
+                    final summary = '${data['summary'] ?? ''}'.trim();
+                    final content = '${data['content'] ?? ''}'.trim();
+                    final dateText = '${data['dateText'] ?? ''}'.trim();
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🔥 $title',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (summary.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                summary,
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                            if (dateText.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    dateText,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => CurrentAffairsDetailScreen(
+                                      title: title,
+                                      summary: summary,
+                                      content: content,
+                                      dateText: dateText,
+                                    ),
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text('Read More'),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                      child: const Text('Read More', style: TextStyle(fontSize: 16)),
-                    ),
-                  ),
+                    );
+                  }),
                 ],
               );
             },
@@ -117,6 +163,8 @@ class CurrentAffairsCard extends StatelessWidget {
 
   DateTime _time(DocumentSnapshot<Map<String, dynamic>> doc) {
     final value = doc.data()?['createdAt'];
-    return value is Timestamp ? value.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+    return value is Timestamp
+        ? value.toDate()
+        : DateTime.fromMillisecondsSinceEpoch(0);
   }
 }
