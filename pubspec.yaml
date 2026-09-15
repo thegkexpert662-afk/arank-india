@@ -38,6 +38,7 @@ dependencies:
   firebase_auth: ^6.0.0
   cloud_firestore: ^6.0.0
   firebase_storage: ^13.0.0
+  pinput: ^5.0.1
 
   # State Management
   provider: ^6.1.5
@@ -48,29 +49,66 @@ dependencies:
   cached_network_image: ^3.4.1
   lottie: ^3.3.1
 
+
+
+
+
   # Storage
   shared_preferences: ^2.5.3
 
   # Internet
   connectivity_plus: ^7.0.0
+  url_launcher: ^6.3.0
 
   # Utilities
   intl: ^0.20.2
   uuid: ^4.5.1
+  pdf: ^3.11.0
+  printing: ^5.13.4
+  path_provider: ^2.1.5
+  open_filex: ^4.5.0
+  qr_flutter: ^4.1.0
+  share_plus: ^10.0.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  carousel_slider: ^5.1.1
+
+
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.1
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/logos/logo.png
+
+  android: true
+  ios: true
+
+  android_12:
+    color: "#FFFFFF"
+    image: assets/images/logos/logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logos/logo.png"
+  min_sdk_android: 21
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^6.0.0
+  # rules and activating additional ones
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -94,6 +132,7 @@ flutter:
     - assets/videos/
     - assets/pdf/
     - assets/json/
+    - assets/avatars/
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
