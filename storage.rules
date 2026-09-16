@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function ownsApp(appId) {
+      return signedIn() && firestore.get(/databases/(default)/documents/apps/$(appId)).data.ownerAdminUid == request.auth.uid;
+    }
+
+    match /app_logos/{appId}/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if ownsApp(appId);
+    }
+  }
+}
