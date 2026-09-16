@@ -45,7 +45,7 @@ class AboutAppScreen extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.flag),
               title: Text("Developed In"),
-              subtitle: Text("India 🇮🇳"),
+              subtitle: Text("KOPERSAY TECHNOLOGIES (India 🇮🇳)"),
             ),
             Divider(),
             ListTile(
@@ -65,7 +65,7 @@ class AboutAppScreen extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.email),
               title: Text("Support"),
-              subtitle: Text("supportallthinks@gmail.com"),
+              subtitle: Text("contact@kopersay.in"),
             ),
             Divider(),
             ListTile(
@@ -73,15 +73,7 @@ class AboutAppScreen extends StatelessWidget {
               title: Text("Current Version"),
               subtitle: Text("1.0.0"),
             ),
-            SizedBox(height: 30),
-            Text(
-              "Developed by KOPERSAY TECHNOLOGIES 🇮🇳",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            
             SizedBox(height: 18),
             Text(
               "© 2026 ARank India\nAll Rights Reserved.",
