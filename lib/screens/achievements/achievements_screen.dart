@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../services/achievement_service.dart';
+import '../mock_test/mock_test_list_screen.dart';
+import '../home/home_screen.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
@@ -32,6 +34,37 @@ class AchievementsScreen extends StatelessWidget {
     }
   }
 
+  String _buttonLabel(String taskType) {
+    switch (taskType) {
+      case 'mock_tests_completed':
+      case 'perfect_score':
+        return 'Start Mock Test';
+      case 'questions_completed':
+      case 'continue_learning_sets_completed':
+        return 'Start Learning';
+      default:
+        return 'Start Task';
+    }
+  }
+
+  Future<void> _openTask(BuildContext context, String taskType) async {
+    if (taskType == 'mock_tests_completed' || taskType == 'perfect_score') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MockTestListScreen()),
+      );
+      return;
+    }
+
+    if (taskType == 'questions_completed' ||
+        taskType == 'continue_learning_sets_completed') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,7 +85,6 @@ class AchievementsScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final doc = achievements[index];
-              // Keep the map explicitly typed so it matches AchievementService.evaluate().
               final Map<String, dynamic> data = Map<String, dynamic>.from(doc.data());
               data['id'] = doc.id;
               final title = (data['title'] ?? '').toString();
@@ -77,6 +109,7 @@ class AchievementsScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(14),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CircleAvatar(
                               radius: 28,
@@ -98,6 +131,20 @@ class AchievementsScreen extends StatelessWidget {
                                     LinearProgressIndicator(value: fraction, minHeight: 6),
                                     const SizedBox(height: 4),
                                     Text(taskType == 'perfect_score' ? 'Best: ${value.toStringAsFixed(0)}%' : '${value.toStringAsFixed(0)} / ${progressTarget.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    const SizedBox(height: 10),
+                                    SizedBox(
+                                      height: 38,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _openTask(context, taskType),
+                                        icon: Icon(unlocked ? Icons.visibility_rounded : Icons.play_arrow_rounded, size: 18),
+                                        label: Text(unlocked ? 'View Task' : _buttonLabel(taskType)),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: iconColor,
+                                          side: BorderSide(color: iconColor.withValues(alpha: 0.55)),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ],
                               ),
