@@ -1,5 +1,6 @@
-/// Identifies which Admin App owns this Student App build.
-///
-/// Each separately deployed Student App should use the UID of its owning
-/// Admin account. This keeps contact details isolated between admins.
-const String kAdminTenantId = 'REPLACE_WITH_ADMIN_UID';
+import '../services/tenant_service.dart';
+
+/// Backward-compatible runtime tenant accessor.
+/// Tenant identity is now stored in SharedPreferences and resolved from the
+/// Student App configuration instead of being hard-coded per build.
+String? get kAdminTenantId => TenantService.appId;
