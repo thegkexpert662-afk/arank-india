@@ -5,10 +5,29 @@ service firebase.storage {
     function ownsApp(appId) {
       return signedIn() && firestore.get(/databases/(default)/documents/apps/$(appId)).data.ownerAdminUid == request.auth.uid;
     }
+    function isMaster() {
+      return signedIn()
+        && firestore.get(/databases/(default)/documents/master_admins/$(request.auth.uid)).data.role == 'master_admin'
+        && firestore.get(/databases/(default)/documents/master_admins/$(request.auth.uid)).data.isActive == true;
+    }
+    function studentHasInstitute(instituteId) {
+      return signedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('instituteId', firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.get('tenantId', '')) == instituteId;
+    }
+    function videoServiceAllowed(instituteId) {
+      return firestore.get(/databases/(default)/documents/apps/$(instituteId)).data.isActive == true
+        && firestore.get(/databases/(default)/documents/service_controls/global).data.get('videoSolutions', true) == true
+        && firestore.get(/databases/(default)/documents/admin_service_controls/$(firestore.get(/databases/(default)/documents/apps/$(instituteId)).data.ownerAdminUid)).data.get('videoSolutions', false) == true;
+    }
 
     match /app_logos/{appId}/{allPaths=**} {
       allow read: if signedIn();
       allow write: if ownsApp(appId);
+    }
+
+    match /videos/{instituteId}/{videoPath=**} {
+      allow read: if isMaster() || (studentHasInstitute(instituteId) && videoServiceAllowed(instituteId));
+      allow write: if isMaster() || (ownsApp(instituteId) && videoServiceAllowed(instituteId));
     }
   }
 }
