@@ -46,13 +46,10 @@ class AchievementService {
             .collection('continue_learning_progress')
             .get();
         for (final doc in snap.docs) {
-          final data = doc.data();
-          final currentIndex = _number(data['currentIndex']);
-          final total = _number(data['totalQuestions']);
-          value += (currentIndex > total ? total : currentIndex);
-          if (data['completed'] == true && total > currentIndex) {
-            value += total - currentIndex;
-          }
+          final progress = doc.data();
+          final currentIndex = _number(progress['currentIndex']);
+          final total = _number(progress['totalQuestions']);
+          value += progress['completed'] == true ? total : currentIndex.clamp(0, total);
         }
         break;
 
@@ -82,12 +79,12 @@ class AchievementService {
 
     final unlocked = value >= target;
 
-    if (unlocked) {
+    if (unlocked && (data['id'] ?? '').toString().isNotEmpty) {
       await _firestore
           .collection('users')
           .doc(user.uid)
           .collection('achievements')
-          .doc((data['id'] ?? '').toString())
+          .doc((data['id']).toString())
           .set({
         'unlocked': true,
         'unlockedAt': FieldValue.serverTimestamp(),
