@@ -65,12 +65,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       setState(() => isLoading = true);
-
-      // Validate and lock the registration to the selected admin tenant BEFORE account creation.
       await TenantService.setAppId(appId);
       final config = await TenantService.getConfig();
       if (!config.exists || config.data()?['isActive'] != true) {
-        throw StateError('Invalid or inactive Admin App ID');
+        throw StateError('Invalid or inactive Institute ID');
       }
 
       final userId = await _generateUniqueUserId();
@@ -99,7 +97,7 @@ class _SignupScreenState extends State<SignupScreen> {
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Account Created'),
-          content: Text('Your ARank India User ID is:\n\n$userId\n\nYour account has been registered with Admin App ID:\n$appId\n\nA verification link has also been sent to your email.'),
+          content: Text('Your ARank India User ID is:\n\n$userId\n\nYour account has been registered with Institute ID:\n$appId\n\nA verification link has also been sent to your email.'),
           actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('OK'))],
         ),
       );
@@ -114,7 +112,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().contains('Invalid or inactive') ? 'Invalid or inactive Admin App ID.' : 'Something went wrong. Please try again.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().contains('Invalid or inactive') ? 'Invalid or inactive Institute ID.' : 'Something went wrong. Please try again.')));
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -146,13 +144,13 @@ class _SignupScreenState extends State<SignupScreen> {
             const SizedBox(height: 30),
             const Text('Create Account', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('Register with your Admin App ID', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            const Text('Register with your Institute ID', style: TextStyle(color: Colors.grey, fontSize: 16)),
             const SizedBox(height: 35),
             TextField(controller: nameController, textInputAction: TextInputAction.next, decoration: _dec('Full Name', Icons.person_outline)),
             const SizedBox(height: 18),
             TextField(controller: emailController, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, decoration: _dec('Email', Icons.email_outlined)),
             const SizedBox(height: 18),
-            TextField(controller: appIdController, textCapitalization: TextCapitalization.characters, textInputAction: TextInputAction.next, decoration: _dec('Admin App ID', Icons.admin_panel_settings_outlined).copyWith(hintText: 'ARANK-12345678', helperText: 'Enter the App ID given by your Admin.')),
+            TextField(controller: appIdController, textCapitalization: TextCapitalization.characters, textInputAction: TextInputAction.next, decoration: _dec('Institute ID', Icons.account_balance_outlined).copyWith(hintText: 'ARANK-12345678', helperText: 'Enter the Institute ID given by your institute.')),
             const SizedBox(height: 18),
             TextField(controller: passwordController, obscureText: hidePassword, textInputAction: TextInputAction.next, decoration: _dec('Password', Icons.lock_outline).copyWith(suffixIcon: IconButton(icon: Icon(hidePassword ? Icons.visibility_off : Icons.visibility), onPressed: () => setState(() => hidePassword = !hidePassword)))),
             const SizedBox(height: 18),
