@@ -5,46 +5,60 @@ service cloud.firestore {
     function ownsApp(appId) {
       return signedIn() && get(/databases/$(database)/documents/apps/$(appId)).data.ownerAdminUid == request.auth.uid;
     }
+    function isMaster() {
+      return signedIn()
+        && get(/databases/$(database)/documents/master_admins/$(request.auth.uid)).data.role == 'master_admin'
+        && get(/databases/$(database)/documents/master_admins/$(request.auth.uid)).data.isActive == true;
+    }
+
+    match /master_admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update, delete: if false;
+    }
 
     match /apps/{appId} {
-      // Only active app configuration is exposed for App ID validation and branding.
-      allow read: if resource.data.isActive == true;
-      allow create: if signedIn() && request.resource.data.ownerAdminUid == request.auth.uid;
-      allow update, delete: if ownsApp(appId) && request.resource.data.ownerAdminUid == resource.data.ownerAdminUid;
+      allow read: if resource.data.isActive == true || isMaster() || ownsApp(appId);
+      allow create: if (signedIn() && request.resource.data.ownerAdminUid == request.auth.uid) || isMaster();
+      allow update, delete: if isMaster() || (ownsApp(appId) && request.resource.data.ownerAdminUid == resource.data.ownerAdminUid);
     }
 
     match /admins/{adminUid} {
-      allow read: if signedIn() && request.auth.uid == adminUid;
-      allow create, update: if signedIn() && request.auth.uid == adminUid;
-      allow delete: if false;
+      allow read: if isMaster() || (signedIn() && request.auth.uid == adminUid);
+      allow create, update: if isMaster() || (signedIn() && request.auth.uid == adminUid);
+      allow delete: if isMaster();
     }
 
     match /admin_contacts/{adminUid} {
-      allow read, write: if signedIn() && request.auth.uid == adminUid;
+      allow read, write: if isMaster() || (signedIn() && request.auth.uid == adminUid);
     }
 
     match /users/{uid} {
-      allow create: if signedIn() && request.auth.uid == uid
+      allow create: if isMaster() || (signedIn() && request.auth.uid == uid
         && request.resource.data.get('tenantId', '') != ''
-        && get(/databases/$(database)/documents/apps/$(request.resource.data.tenantId)).data.isActive == true;
-      allow read: if signedIn() && (request.auth.uid == uid || ownsApp(resource.data.get('tenantId', '')));
-      allow update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if signedIn() && request.auth.uid == uid;
+        && get(/databases/$(database)/documents/apps/$(request.resource.data.tenantId)).data.isActive == true);
+      allow read: if isMaster() || (signedIn() && (request.auth.uid == uid || ownsApp(resource.data.get('tenantId', ''))));
+      allow update: if isMaster() || (signedIn() && request.auth.uid == uid
+        && request.resource.data.tenantId == resource.data.tenantId);
+      allow delete: if isMaster() || (signedIn() && request.auth.uid == uid);
 
       match /achievements/{achievementId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
+        allow read, write: if isMaster() || (signedIn() && request.auth.uid == uid);
       }
     }
 
+    match /audit_logs/{logId} {
+      allow read, create: if isMaster();
+      allow update, delete: if false;
+    }
+
     match /{collection}/{docId} {
-      allow read: if signedIn() && (
+      allow read: if isMaster() || (signedIn() && (
         (resource.data.get('tenantId', '') != '' && ownsApp(resource.data.tenantId)) ||
         (resource.data.get('tenantId', '') != '' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('tenantId', '') == resource.data.tenantId && resource.data.get('isActive', true) == true)
-      );
-      allow create: if signedIn() && request.resource.data.get('tenantId', '') != '' && ownsApp(request.resource.data.tenantId);
-      allow update: if signedIn() && ownsApp(resource.data.get('tenantId', '')) && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if signedIn() && ownsApp(resource.data.get('tenantId', ''));
+      ));
+      allow create: if isMaster() || (signedIn() && request.resource.data.get('tenantId', '') != '' && ownsApp(request.resource.data.tenantId));
+      allow update: if isMaster() || (signedIn() && ownsApp(resource.data.get('tenantId', '')) && request.resource.data.tenantId == resource.data.tenantId);
+      allow delete: if isMaster() || (signedIn() && ownsApp(resource.data.get('tenantId', '')));
     }
   }
 }
