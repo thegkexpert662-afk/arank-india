@@ -9,7 +9,10 @@ plugins {
 
 android {
     namespace = "com.arankindia.arank_india"
-    compileSdk = flutter.compileSdkVersion
+
+    // Android 16 / API 36 build target.
+    // This also satisfies the current Google Play target requirement for new apps/updates.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -18,20 +21,23 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.arankindia.arank_india"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+
+        // Keep Flutter's minimum SDK so the app can continue supporting
+        // the Android versions allowed by the current Flutter project.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+
+        // Android 16 / API 36. The app remains installable on lower
+        // Android versions supported by minSdk.
+        targetSdk = 36
+
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // TODO: Replace with the real release signing configuration before Play Store release.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
