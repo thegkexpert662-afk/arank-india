@@ -7,91 +7,43 @@ class AchievementsScreen extends StatelessWidget {
 
   IconData _iconFromKey(String? key) {
     switch (key) {
-      case 'emoji_events':
-        return Icons.emoji_events;
-      case 'local_fire_department':
-        return Icons.local_fire_department;
-      case 'workspace_premium':
-        return Icons.workspace_premium;
-      case 'military_tech':
-        return Icons.military_tech;
-      case 'star':
-        return Icons.star;
-      case 'school':
-        return Icons.school;
-      case 'quiz':
-        return Icons.quiz;
-      case 'bolt':
-        return Icons.bolt;
-      case 'trending_up':
-        return Icons.trending_up;
-      default:
-        return Icons.emoji_events;
+      case 'emoji_events': return Icons.emoji_events;
+      case 'local_fire_department': return Icons.local_fire_department;
+      case 'workspace_premium': return Icons.workspace_premium;
+      case 'military_tech': return Icons.military_tech;
+      case 'star': return Icons.star;
+      case 'school': return Icons.school;
+      case 'quiz': return Icons.quiz;
+      case 'bolt': return Icons.bolt;
+      case 'trending_up': return Icons.trending_up;
+      default: return Icons.emoji_events;
     }
   }
 
-  Color _colorFromValue(dynamic value) {
-    if (value is int) return Color(value);
-    return Colors.amber;
-  }
+  Color _colorFromValue(dynamic value) => value is int ? Color(value) : Colors.amber;
 
   Future<bool> _isUnlocked(String achievementId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return false;
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('achievements')
-        .doc(achievementId)
-        .get();
-
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('achievements').doc(achievementId).get();
     return doc.exists && (doc.data()?['unlocked'] ?? true) == true;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Achievements'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Achievements'), centerTitle: true),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('achievements')
-            .where('isActive', isEqualTo: true)
-            .orderBy('sortOrder')
-            .snapshots(),
+        // Do not use where + orderBy here. That requires a Firestore composite index.
+        stream: FirebaseFirestore.instance.collection('achievements').where('isActive', isEqualTo: true).snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Unable to load achievements.\n${snapshot.error}', textAlign: TextAlign.center)));
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Unable to load achievements.\n${snapshot.error}',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
+          final achievements = [...(snapshot.data?.docs ?? [])];
+          achievements.sort((a, b) => _sortOrder(a.data()).compareTo(_sortOrder(b.data())));
 
-          final achievements = snapshot.data?.docs ?? [];
-
-          if (achievements.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No achievements available right now.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
+          if (achievements.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No achievements available right now.', textAlign: TextAlign.center)));
 
           return ListView.separated(
             itemCount: achievements.length,
@@ -101,37 +53,21 @@ class AchievementsScreen extends StatelessWidget {
               final data = doc.data();
               final title = (data['title'] ?? '').toString();
               final description = (data['description'] ?? '').toString();
-              final iconKey = data['icon']?.toString();
               final iconColor = _colorFromValue(data['iconColor']);
 
               return FutureBuilder<bool>(
                 future: _isUnlocked(doc.id),
                 builder: (context, unlockSnapshot) {
                   final unlocked = unlockSnapshot.data ?? false;
-
                   return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     leading: CircleAvatar(
                       backgroundColor: iconColor.withValues(alpha: 0.12),
-                      child: Icon(
-                        _iconFromKey(iconKey),
-                        color: unlocked ? iconColor : Colors.grey,
-                      ),
+                      child: Icon(_iconFromKey(data['icon']?.toString()), color: unlocked ? iconColor : Colors.grey),
                     ),
-                    title: Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: unlocked ? null : Colors.grey.shade700,
-                      ),
-                    ),
+                    title: Text(title, style: TextStyle(fontWeight: FontWeight.w500, color: unlocked ? null : Colors.grey.shade700)),
                     subtitle: Text(description),
-                    trailing: unlocked
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : const Icon(Icons.lock_outline, color: Colors.grey),
+                    trailing: unlocked ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.lock_outline, color: Colors.grey),
                   );
                 },
               );
@@ -141,4 +77,6 @@ class AchievementsScreen extends StatelessWidget {
       ),
     );
   }
+
+  int _sortOrder(Map<String, dynamic> data) => int.tryParse('${data['sortOrder'] ?? 0}') ?? 0;
 }
