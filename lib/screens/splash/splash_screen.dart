@@ -1,11 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../services/tenant_service.dart';
-import '../app_setup/app_id_setup_screen.dart';
 import '../auth/login_screen.dart';
 import '../home/home_screen.dart';
+import '../../services/tenant_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,12 +27,14 @@ class _SplashScreenState extends State<SplashScreen> {
     final user = FirebaseAuth.instance.currentUser;
     Widget next;
 
-    if (TenantService.appId == null || TenantService.appId!.isEmpty) {
-      next = const AppIdSetupScreen();
-    } else if (user != null) {
+    if (user != null) {
+      // Restore the student's tenant association before opening the app.
       await TenantService.attachStudentToTenant(user.uid);
       next = const HomeScreen();
     } else {
+      // Login is the default entry point.
+      // New students can use the Sign Up option there, where Admin App ID
+      // is entered along with the registration details.
       next = const LoginScreen();
     }
 
@@ -66,10 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   height: 120,
                 )
                     .animate()
-                    .scale(
-                      duration: 700.ms,
-                      curve: Curves.easeOutBack,
-                    )
+                    .scale(duration: 700.ms, curve: Curves.easeOutBack)
                     .fadeIn(),
                 const SizedBox(height: 28),
                 const Text(
