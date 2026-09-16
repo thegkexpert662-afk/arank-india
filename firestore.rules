@@ -6,12 +6,33 @@ service cloud.firestore {
     function isMaster() {
       return signedIn() && get(/databases/$(database)/documents/master_admins/$(request.auth.uid)).data.role == 'master_admin' && get(/databases/$(database)/documents/master_admins/$(request.auth.uid)).data.isActive == true;
     }
+    function studentInstitute() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('instituteId', get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('tenantId', ''));
+    }
+    function videoStudentAllowed(instituteId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isActive', true) == true
+        && get(/databases/$(database)/documents/apps/$(instituteId)).data.isActive == true
+        && get(/databases/$(database)/documents/service_controls/global).data.get('videoSolutions', true) == true
+        && get(/databases/$(database)/documents/apps/$(instituteId)).data.ownerAdminUid != ''
+        && get(/databases/$(database)/documents/admin_service_controls/$(get(/databases/$(database)/documents/apps/$(instituteId)).data.ownerAdminUid)).data.get('videoSolutions', false) == true
+        && studentInstitute() == instituteId;
+    }
+
     match /master_admins/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow create, update, delete: if false; }
     match /service_controls/{docId} { allow read: if signedIn(); allow create, update, delete: if isMaster(); }
     match /admin_service_controls/{adminUid} {
       allow read: if isMaster() || (signedIn() && request.auth.uid == adminUid);
       allow create, update, delete: if isMaster();
     }
+
+    match /video_solutions/{videoId} {
+      allow read: if isMaster() || videoStudentAllowed(resource.data.get('instituteId', '')) || (signedIn() && ownsApp(resource.data.get('instituteId', '')) && get(/databases/$(database)/documents/service_controls/global).data.get('videoSolutions', true) == true && get(/databases/$(database)/documents/admin_service_controls/$(request.auth.uid)).data.get('videoSolutions', false) == true);
+      allow create: if isMaster() || (signedIn() && request.resource.data.get('instituteId', '') != '' && ownsApp(request.resource.data.instituteId) && get(/databases/$(database)/documents/apps/$(request.resource.data.instituteId)).data.isActive == true && get(/databases/$(database)/documents/service_controls/global).data.get('videoSolutions', true) == true && get(/databases/$(database)/documents/admin_service_controls/$(request.auth.uid)).data.get('videoSolutions', false) == true);
+      allow update: if isMaster() || (signedIn() && ownsApp(resource.data.get('instituteId', '')) && request.resource.data.get('instituteId', '') == resource.data.get('instituteId', '') && get(/databases/$(database)/documents/service_controls/global).data.get('videoSolutions', true) == true && get(/databases/$(database)/documents/admin_service_controls/$(request.auth.uid)).data.get('videoSolutions', false) == true);
+      allow delete: if isMaster() || (signedIn() && ownsApp(resource.data.get('instituteId', '')) && get(/databases/$(database)/documents/service_controls/global).data.get('videoSolutions', true) == true && get(/databases/$(database)/documents/admin_service_controls/$(request.auth.uid)).data.get('videoSolutions', false) == true);
+    }
+
     match /apps/{appId} {
       allow read: if resource.data.isActive == true || isMaster() || ownsApp(appId);
       allow create: if (signedIn() && request.resource.data.ownerAdminUid == request.auth.uid) || isMaster();
