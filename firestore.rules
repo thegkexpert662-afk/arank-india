@@ -6,30 +6,27 @@ service cloud.firestore {
       return signedIn() && get(/databases/$(database)/documents/apps/$(appId)).data.ownerAdminUid == request.auth.uid;
     }
 
-    // A Student App configuration is readable so a student can validate its App ID,
-    // but only its owning admin can create/update/delete it.
     match /apps/{appId} {
-      allow read: if signedIn() && resource.data.isActive == true;
+      // Only active app configuration is exposed for App ID validation and branding.
+      allow read: if resource.data.isActive == true;
       allow create: if signedIn() && request.resource.data.ownerAdminUid == request.auth.uid;
       allow update, delete: if ownsApp(appId) && request.resource.data.ownerAdminUid == resource.data.ownerAdminUid;
     }
 
-    // Admin profile is private to the admin. The appId is the tenant boundary.
     match /admins/{adminUid} {
       allow read: if signedIn() && request.auth.uid == adminUid;
       allow create, update: if signedIn() && request.auth.uid == adminUid;
       allow delete: if false;
     }
 
-    // Legacy contact records remain isolated by admin UID.
     match /admin_contacts/{adminUid} {
       allow read, write: if signedIn() && request.auth.uid == adminUid;
     }
 
-    // Student profile can only be changed by the student, and its tenant cannot
-    // be switched to another app by the client.
     match /users/{uid} {
-      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.get('tenantId', '') != '';
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.get('tenantId', '') != ''
+        && get(/databases/$(database)/documents/apps/$(request.resource.data.tenantId)).data.isActive == true;
       allow read: if signedIn() && (request.auth.uid == uid || ownsApp(resource.data.get('tenantId', '')));
       allow update: if signedIn() && request.auth.uid == uid
         && request.resource.data.tenantId == resource.data.tenantId;
@@ -40,9 +37,6 @@ service cloud.firestore {
       }
     }
 
-    // Tenant-owned content: documents must carry tenantId. Admins can only
-    // modify documents belonging to their own app; students can read active data
-    // from their assigned tenant.
     match /{collection}/{docId} {
       allow read: if signedIn() && (
         (resource.data.get('tenantId', '') != '' && ownsApp(resource.data.tenantId)) ||
