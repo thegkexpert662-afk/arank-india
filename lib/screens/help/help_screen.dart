@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../config/app_tenant_config.dart';
 import 'faq_screen.dart';
 import 'report_bug_screen.dart';
 
@@ -8,10 +9,12 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final contactStream = FirebaseFirestore.instance
-        .collection('app_settings')
-        .doc('contact')
-        .snapshots();
+    final contactStream = kAdminTenantId == 'REPLACE_WITH_ADMIN_UID'
+        ? const Stream<DocumentSnapshot<Map<String, dynamic>>>.empty()
+        : FirebaseFirestore.instance
+            .collection('admin_contacts')
+            .doc(kAdminTenantId)
+            .snapshots();
 
     return Scaffold(
       appBar: AppBar(
