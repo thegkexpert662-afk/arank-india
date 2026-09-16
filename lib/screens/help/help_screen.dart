@@ -32,7 +32,7 @@ class HelpScreen extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.email),
             title: Text("Email Support"),
-            subtitle: Text("supportallthinks@gmail.com"),
+            subtitle: Text("contact@kopersay.in"),
           ),
           Divider(),
           ListTile(
