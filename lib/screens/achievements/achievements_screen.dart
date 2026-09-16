@@ -52,7 +52,9 @@ class AchievementsScreen extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final doc = achievements[index];
-              final data = {...doc.data(), 'id': doc.id};
+              // Keep the map explicitly typed so it matches AchievementService.evaluate().
+              final Map<String, dynamic> data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
               final title = (data['title'] ?? '').toString();
               final description = (data['description'] ?? '').toString();
               final iconColor = _colorFromValue(data['iconColor']);
