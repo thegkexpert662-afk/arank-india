@@ -26,7 +26,7 @@ class HelpSupportScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.email_outlined),
             title: const Text("Email Support"),
-            subtitle: const Text("support@arankindia.com"),
+            subtitle: const Text("contact@kopersay.in"),
             onTap: () {
               // TODO: Open Email App
             },
